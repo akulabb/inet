@@ -1,24 +1,21 @@
-public class Router {
-    private Device[] devices = new Device[127];
+import java.util.HashMap;
 
-    public byte getId (Device device) {
-        for (byte i=0; i<devices.length; i++){
-            //System.out.println(i);
-            if (devices[i] == null || devices[i] == device) {
-                devices[i] = device;
-                device.setId(++i);
-                return i;
+public class Router {
+    private final HashMap<Byte, Device> devices = new HashMap<>();
+
+    public void registerDevice (Device device) {
+        for (byte id=1; id<127; id++) {
+            //System.out.println(id);
+            if (devices.get(id) == null || devices.get(id) == device) {
+                devices.put(id, device);
+                device.setId(id);
+                device.setName("KUB" + id);
+                return;
             }
         }
-        return -1;
     }
 
     public void printDevices () {
-        for (byte i=0; i<devices.length; i++) {
-            Device device = devices[i];
-            if (device == null)
-                return;
-            System.out.println(device.getId());
-        }
+        devices.forEach((id, device) -> System.out.println("Device " + device.getName() + " on place " + id + " has id " + device.getId()));
     }
 }

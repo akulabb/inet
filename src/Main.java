@@ -5,14 +5,14 @@ public class Main {
         Device device2 = new Device();
         Device device3 = new Device();
         Device device4 = new Device();
-        router1.getId(device1);
-        router1.getId(device2);
-        router1.getId(device3);
-        router1.getId(device4);
-        router1.getId(device1);
-        router1.getId(device1);
-        router1.getId(device2);
-        router1.getId(device1);
+        router1.registerDevice(device1);
+        router1.registerDevice(device2);
+        router1.registerDevice(device3);
+        router1.registerDevice(device4);
+        router1.registerDevice(device1);
+        router1.registerDevice(device1);
+        router1.registerDevice(device2);
+        router1.registerDevice(device1);
         router1.printDevices();
     }
 }
