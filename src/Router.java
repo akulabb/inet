@@ -2,10 +2,14 @@ import java.util.HashMap;
 
 public class Router extends Device {
     private final HashMap<Byte, Device> devices = new HashMap<>();
+    private MeshSpace meshSpace;
 
-    public Router() {
+    public Router(MeshSpace space) {
+        super(space);
+        this.meshSpace = space;
         setRouter(this);
         registerDevice(this);
+
     }
 
     public void registerDevice (Device device) {
@@ -13,11 +17,13 @@ public class Router extends Device {
         for (byte id=1; id<127; id++) {
             //System.out.println(id);
             if (devices.get(id) == null || devices.get(id) == device) {
+                meshSpace.addDevice(device);
                 deviceAddress[0] = id;
                 devices.put(id, device);
                 device.setAddress(deviceAddress);
                 device.setName("KUB" + id);
                 device.setRouter(this);
+                System.out.println("New device" + device.getName() + " registred with id " + device.getStringAddress());
                 return;
             }
         }

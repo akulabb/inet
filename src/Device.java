@@ -8,8 +8,12 @@ public class Device {
 
     private Router router;
     private String name;
+    private MeshSpace meshSpace;
     private byte[] address;
 
+    public Device(MeshSpace space) {
+        meshSpace = space;
+    }
 
     public byte[] getAddress() {
         return address;
@@ -39,12 +43,18 @@ public class Device {
         System.out.println(router.getDevices());
     }
 
-    public byte[] createPacket(@NotNull String message, byte @NotNull [] targetAddress) {
+    private byte[] createPacket(@NotNull String message, byte @NotNull [] targetAddress, byte timeToLive) {
         byte[] messageBytes = message.getBytes(StandardCharsets.UTF_8);
 
-        ByteBuffer bufPacket = ByteBuffer.allocate(address.length+1+messageBytes.length+targetAddress.length);
+        ByteBuffer bufPacket = ByteBuffer.allocate(
+                address.length
+                        +2 //TTL + message length
+                        +messageBytes.length
+                        +targetAddress.length
+        );
 
         bufPacket.put(targetAddress);
+        bufPacket.put(timeToLive);
         bufPacket.put((byte) messageBytes.length);
         bufPacket.put(messageBytes);
         bufPacket.put(address);
@@ -53,24 +63,31 @@ public class Device {
     }
 
     public void receivePacket(byte[] packet) {
-        System.out.println("Received packet");
+        System.out.println(getName() + " received packet");
         for (byte i = 0; i <= address.length-1; i++) {
             if (packet[i] != address[i]) {
-                transferPacket(packet);
+                //TODO transferPacket(packet);
                 return;
             }
             parsePacket(packet);
         }
     }
 
+    public void sendPacket(String message, byte[] destinationAddress) {
+        byte[] packet = createPacket(message, destinationAddress, (byte) 1);
+        meshSpace.sendPacket(packet, this);
+    }
+
     private void transferPacket(byte[] packet) {
-        return;                                         //todo make transferring mechanism
+        byte ttl = packet[address.length];
+        packet[address.length] = (byte) (ttl - 1);          //TODO
+        meshSpace.sendPacket(packet, this);
     }
 
     private void parsePacket(byte[] packet) {
         System.out.println("Parsing packet...");
         ByteBuffer bufPacket = ByteBuffer.wrap(packet);
-        bufPacket.position(address.length);
+        bufPacket.position(address.length+1);
 
         int length = bufPacket.get() & 0xFF;
         byte[] messageBytes = new byte[length];
