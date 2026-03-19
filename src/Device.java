@@ -1,5 +1,7 @@
 import org.jetbrains.annotations.NotNull;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HexFormat;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
@@ -8,8 +10,9 @@ public class Device {
 
     private Router router;
     private String name;
-    private MeshSpace meshSpace;
     private byte[] address;
+    private final MeshSpace meshSpace;
+    private final byte[][] lastPackets = new byte[5][];
 
     public Device(MeshSpace space) {
         meshSpace = space;
@@ -43,6 +46,34 @@ public class Device {
         System.out.println(router.getDevices());
     }
 
+    private void writePacket(byte[] packet) {
+        byte[] packetToWrite;
+        byte[] packetToSave = new byte[packet.length];
+        int lastIndex = lastPackets.length-1;
+
+        for (int i = lastIndex; i>=0; i--) {
+            packetToWrite = packetToSave;
+            packetToSave = lastPackets[i];
+            lastPackets[i] = packetToWrite;
+        }
+
+        System.arraycopy(packet, 0, lastPackets[lastIndex], 0, packet.length);
+        lastPackets[lastIndex][address.length] = 0;
+    }
+
+    private boolean packetWasHere(byte[] packet) {
+        boolean packetWasHere = false;
+        byte[] cleanPacket = packet.clone();
+        cleanPacket[address.length] = 0;
+        for (byte[] packetToCompare: lastPackets) {
+            if (Arrays.equals(cleanPacket, packetToCompare)) {
+                packetWasHere = true;
+                System.out.println(getName() + " has received a duplicate packet");
+            }
+        }
+        return packetWasHere;
+    }
+
     private byte[] createPacket(@NotNull String message, byte @NotNull [] targetAddress, byte timeToLive) {
         byte[] messageBytes = message.getBytes(StandardCharsets.UTF_8);
 
@@ -63,11 +94,15 @@ public class Device {
     }
 
     public void receivePacket(byte[] packet) {
-        System.out.println(getName() + " received packet");
-        for (byte i = 0; i <= address.length-1; i++) {
-            if (packet[i] != address[i]) {
-                //TODO transferPacket(packet);
-                return;
+        if (!packetWasHere(packet)) {
+            writePacket(packet);
+            byte[] newPacket = packet.clone();
+            System.out.println(getName() + " received packet with ttl " + newPacket[address.length]);
+            for (byte i = 0; i <= address.length - 1; i++) {
+                if (newPacket[i] != address[i]) {
+                    transferPacket(newPacket);
+                    return;
+                }
             }
             parsePacket(packet);
         }
@@ -80,8 +115,10 @@ public class Device {
 
     private void transferPacket(byte[] packet) {
         byte ttl = packet[address.length];
-        packet[address.length] = (byte) (ttl - 1);          //TODO
-        meshSpace.sendPacket(packet, this);
+        if (ttl > 0) {
+            packet[address.length] = (byte) (ttl - 1);
+            meshSpace.sendPacket(packet, this);
+        }
     }
 
     private void parsePacket(byte[] packet) {
